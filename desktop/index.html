@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>sunOS Desktop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="desktop">
+
+        <header class="topbar">
+            <div class="brand">sunOS</div>
+            <div id="clock">00:00</div>
+        </header>
+
+        <section class="workspace">
+            <div class="welcome">
+                <p class="eyebrow">SYSTEM ENVIRONMENT</p>
+                <h1>Welcome to sunOS.</h1>
+                <p>A new computing experience.</p>
+            </div>
+
+            <div class="window" id="terminal">
+                <div class="window-header">
+                    <span>sunOS Terminal</span>
+                    <button onclick="closeTerminal()">×</button>
+                </div>
+
+                <div class="terminal-content" id="output">
+                    sunOS Terminal [Prototype]<br>
+                    Type help to see commands.<br><br>
+                </div>
+
+                <div class="command-line">
+                    <span>root@sunos:~$</span>
+                    <input id="command" autocomplete="off">
+                </div>
+            </div>
+        </section>
+
+        <footer class="dock">
+            <button onclick="openTerminal()">Terminal</button>
+            <button onclick="showAbout()">About sunOS</button>
+        </footer>
+
+    </main>
+
+    <script src="desktop.js"></script>
+</body>
+</html>
