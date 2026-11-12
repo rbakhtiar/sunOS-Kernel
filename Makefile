@@ -1,13 +1,8 @@
 
-# ==================================================
-# sunOS - x86_64 Hybrid Kernel
+# ==========================================================
+# sunOS - x86_64 Hybrid Operating System
 # Build system
-# ==================================================
-
-BUILD_DIR := build
-KERNEL_DIR := kernel
-BOOT_DIR := bootloader
-ESP_DIR := $(BUILD_DIR)/esp
+# ==========================================================
 
 CC      := gcc
 LD      := ld
@@ -15,15 +10,24 @@ AS      := gcc
 OBJCOPY := objcopy
 QEMU    := qemu-system-x86_64
 
-# UEFI paths (GNU-EFI)
+BUILD_DIR := build
+KERNEL_DIR := kernel
+BOOT_DIR := bootloader
+ESP_DIR := $(BUILD_DIR)/esp
+
 EFI_INCLUDE := /usr/include/efi
-EFI_ARCH    := /usr/include/efi/x86_64
+EFI_ARCH := /usr/include/efi/x86_64
 
 EFI_CRT := $(shell find /usr/lib /usr/lib64 -name crt0-efi-x86_64.o 2>/dev/null | head -n 1)
 EFI_LDS := $(shell find /usr/lib /usr/lib64 -name elf_x86_64_efi.lds 2>/dev/null | head -n 1)
 EFI_LIBDIR := $(dir $(EFI_CRT))
 
-# Kernel compiler flags
+OVMF_CODE ?= /usr/share/OVMF/OVMF_CODE.fd
+
+# ----------------------------------------------------------
+# Compiler flags
+# ----------------------------------------------------------
+
 KERNEL_CFLAGS := \
 	-m64 \
 	-ffreestanding \
@@ -37,11 +41,11 @@ KERNEL_CFLAGS := \
 	-O2 \
 	-Wall \
 	-Wextra \
+	-Werror \
 	-I$(KERNEL_DIR)/include
 
 KERNEL_ASFLAGS := -m64 -ffreestanding -mno-red-zone
 
-# UEFI compiler flags
 EFI_CFLAGS := \
 	-I$(EFI_INCLUDE) \
 	-I$(EFI_ARCH) \
@@ -61,46 +65,56 @@ EFI_LDFLAGS := \
 	-L$(EFI_LIBDIR) \
 	-T$(EFI_LDS)
 
-# Kernel files
+# ----------------------------------------------------------
+# Kernel objects
+# ----------------------------------------------------------
+
 KERNEL_OBJECTS := \
 	$(BUILD_DIR)/kernel_entry.o \
 	$(BUILD_DIR)/kernel_main.o \
-	$(BUILD_DIR)/serial.o
+	$(BUILD_DIR)/serial.o \
+	$(BUILD_DIR)/pmm.o \
+	$(BUILD_DIR)/paging.o \
+	$(BUILD_DIR)/idt.o
 
 .PHONY: all kernel bootloader esp run clean check-tools
 
 all: kernel bootloader esp
 
-# --------------------------------------------------
-# Check dependencies
-# --------------------------------------------------
-
-check-tools:
-	@command -v $(CC) >/dev/null || (echo "Missing GCC"; exit 1)
-	@command -v $(LD) >/dev/null || (echo "Missing GNU ld"; exit 1)
-	@command -v $(OBJCOPY) >/dev/null || (echo "Missing objcopy"; exit 1)
-	@test -f "$(EFI_CRT)" || (echo "Missing GNU-EFI CRT. Install GNU-EFI."; exit 1)
-	@test -f "$(EFI_LDS)" || (echo "Missing GNU-EFI linker script."; exit 1)
-	@test -d "$(EFI_INCLUDE)" || (echo "Missing GNU-EFI headers."; exit 1)
-	@echo "Build dependencies found."
-
-# --------------------------------------------------
-# Kernel
-# --------------------------------------------------
-
-kernel: $(BUILD_DIR)/kernel.elf
-
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+
+# ----------------------------------------------------------
+# Kernel assembly
+# ----------------------------------------------------------
 
 $(BUILD_DIR)/kernel_entry.o: $(KERNEL_DIR)/entry.S | $(BUILD_DIR)
 	$(AS) $(KERNEL_ASFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/kernel_main.o: $(KERNEL_DIR)/main.c $(KERNEL_DIR)/include/sunos.h | $(BUILD_DIR)
+# ----------------------------------------------------------
+# Kernel C files
+# ----------------------------------------------------------
+
+$(BUILD_DIR)/kernel_main.o: $(KERNEL_DIR)/main.c | $(BUILD_DIR)
 	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/serial.o: $(KERNEL_DIR)/arch/x86_64/serial.c $(KERNEL_DIR)/include/sunos.h | $(BUILD_DIR)
+$(BUILD_DIR)/serial.o: $(KERNEL_DIR)/arch/x86_64/serial.c | $(BUILD_DIR)
 	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/pmm.o: $(KERNEL_DIR)/memory/pmm.c | $(BUILD_DIR)
+	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/paging.o: $(KERNEL_DIR)/arch/x86_64/paging.c | $(BUILD_DIR)
+	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/idt.o: $(KERNEL_DIR)/arch/x86_64/idt.c | $(BUILD_DIR)
+	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+
+# ----------------------------------------------------------
+# Kernel linking
+# ----------------------------------------------------------
+
+kernel: $(BUILD_DIR)/kernel.elf
 
 $(BUILD_DIR)/kernel.elf: $(KERNEL_OBJECTS) $(KERNEL_DIR)/linker.ld
 	$(LD) -nostdlib \
@@ -109,9 +123,9 @@ $(BUILD_DIR)/kernel.elf: $(KERNEL_OBJECTS) $(KERNEL_DIR)/linker.ld
 		-o $@ \
 		$(KERNEL_OBJECTS)
 
-# --------------------------------------------------
+# ----------------------------------------------------------
 # UEFI bootloader
-# --------------------------------------------------
+# ----------------------------------------------------------
 
 bootloader: $(BUILD_DIR)/BOOTX64.EFI
 
@@ -138,24 +152,35 @@ $(BUILD_DIR)/BOOTX64.EFI: $(BUILD_DIR)/bootloader.so
 		--target=efi-app-x86_64 \
 		$< $@
 
-# --------------------------------------------------
+# ----------------------------------------------------------
 # EFI system partition
-# --------------------------------------------------
+# ----------------------------------------------------------
 
-esp: all
+esp: kernel bootloader
 	mkdir -p $(ESP_DIR)/EFI/BOOT
 	cp $(BUILD_DIR)/BOOTX64.EFI $(ESP_DIR)/EFI/BOOT/BOOTX64.EFI
 	cp $(BUILD_DIR)/kernel.elf $(ESP_DIR)/kernel.elf
-	@echo "sunOS EFI directory prepared."
 
-# --------------------------------------------------
-# Run with QEMU + OVMF
-# --------------------------------------------------
+# ----------------------------------------------------------
+# Build dependency checks
+# ----------------------------------------------------------
 
-OVMF_CODE ?= /usr/share/OVMF/OVMF_CODE.fd
+check-tools:
+	@command -v gcc >/dev/null || (echo "Missing GCC"; exit 1)
+	@command -v ld >/dev/null || (echo "Missing GNU ld"; exit 1)
+	@command -v objcopy >/dev/null || (echo "Missing objcopy"; exit 1)
+	@command -v make >/dev/null || (echo "Missing make"; exit 1)
+	@test -f "$(EFI_CRT)" || (echo "Missing GNU-EFI CRT"; exit 1)
+	@test -f "$(EFI_LDS)" || (echo "Missing GNU-EFI linker script"; exit 1)
+	@test -d "$(EFI_INCLUDE)" || (echo "Missing GNU-EFI headers"; exit 1)
+	@echo "All required build dependencies found."
 
-run: all
-	@test -f "$(OVMF_CODE)" || (echo "OVMF firmware not found. Install OVMF."; exit 1)
+# ----------------------------------------------------------
+# QEMU
+# ----------------------------------------------------------
+
+run: esp
+	@test -f "$(OVMF_CODE)" || (echo "OVMF firmware not found"; exit 1)
 	$(QEMU) \
 		-machine q35 \
 		-m 512M \
@@ -164,10 +189,10 @@ run: all
 		-serial stdio \
 		-net none
 
-# --------------------------------------------------
-# Clean
-# --------------------------------------------------
+# ----------------------------------------------------------
+# Cleanup
+# ----------------------------------------------------------
 
 clean:
 	rm -rf $(BUILD_DIR)
-	@echo "Build files removed."
+	@echo "sunOS build directory cleaned."
