@@ -3,23 +3,36 @@ const output = document.getElementById("output");
 const command = document.getElementById("command");
 
 function print(text) {
-    output.innerHTML +=
-        document.createElement("div").textContent = text;
+    const line = document.createElement("div");
+    line.textContent = text;
+    output.appendChild(line);
+}
+
+function escapeHTML(value) {
+    return value.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
 }
 
 function runCommand(value) {
     const cmd = value.trim().toLowerCase();
 
-    output.innerHTML += `<div>root@sunos:~$ ${escapeHTML(value)}</div>`;
+    const prompt = document.createElement("div");
+    prompt.textContent = "root@sunos:~$ " + value;
+    output.appendChild(prompt);
 
     switch (cmd) {
         case "help":
             print("Available commands:");
-            print("help - Show commands");
-            print("version - Show version");
-            print("clear - Clear terminal");
-            print("date - Show current date");
-            print("about - About sunOS");
+            print("help     - Show commands");
+            print("version  - Show version");
+            print("clear    - Clear terminal");
+            print("date     - Show current date");
+            print("about    - About sunOS");
             break;
 
         case "version":
@@ -38,21 +51,14 @@ function runCommand(value) {
             output.innerHTML = "";
             break;
 
+        case "":
+            break;
+
         default:
             print("Unknown command: " + value);
     }
 
     output.scrollTop = output.scrollHeight;
-}
-
-function escapeHTML(value) {
-    return value.replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[char]);
 }
 
 command.addEventListener("keydown", event => {
