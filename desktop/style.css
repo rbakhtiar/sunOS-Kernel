@@ -1,0 +1,129 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #071510;
+    color: #e7eee9;
+    font-family: Arial, sans-serif;
+}
+
+.desktop {
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at 70% 20%, #174532, transparent 55%),
+        linear-gradient(135deg, #06110d, #10291e);
+}
+
+.topbar {
+    height: 55px;
+    padding: 0 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #07140fe8;
+    border-bottom: 1px solid #ffffff15;
+}
+
+.brand {
+    color: #b9d8c3;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 3px;
+}
+
+#clock {
+    color: #a9c9b4;
+    font-size: 13px;
+}
+
+.workspace {
+    min-height: calc(100vh - 115px);
+    padding: 65px 8%;
+}
+
+.eyebrow {
+    color: #80b497;
+    letter-spacing: 4px;
+    font-size: 11px;
+}
+
+.welcome h1 {
+    font-size: clamp(35px, 6vw, 65px);
+    margin: 12px 0;
+    font-weight: 500;
+}
+
+.welcome p:last-child {
+    color: #a4b8aa;
+}
+
+.window {
+    width: min(600px, 100%);
+    margin-top: 55px;
+    background: #080e0beF;
+    border: 1px solid #41634e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 70px #0008;
+}
+
+.window-header {
+    padding: 14px 17px;
+    background: #17281e;
+    display: flex;
+    justify-content: space-between;
+}
+
+button {
+    cursor: pointer;
+    color: #d9e8dc;
+    background: #254a36;
+    border: 1px solid #456c53;
+    border-radius: 7px;
+    padding: 9px 15px;
+}
+
+.window-header button {
+    padding: 0 8px;
+}
+
+.terminal-content {
+    padding: 18px;
+    min-height: 130px;
+    color: #9ed1aa;
+    font-family: monospace;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.command-line {
+    display: flex;
+    gap: 10px;
+    padding: 12px 18px;
+    border-top: 1px solid #ffffff15;
+    font-family: monospace;
+    color: #80b497;
+}
+
+.command-line input {
+    min-width: 0;
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-family: monospace;
+}
+
+.dock {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #07140fe8;
+    border-top: 1px solid #ffffff15;
+}
